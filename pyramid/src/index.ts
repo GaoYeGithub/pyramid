@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
-import { Client, TextChannel, Message, GatewayIntentBits, ActivityType } from 'discord.js';
+import { Client, Message, GatewayIntentBits, ActivityType } from 'discord.js';
 
-import { isValid, genPyramid } from './util';
+import { isValid, genPyramid, genCenteredPyramid, genUpsideDownPyramid, genRightPyramid, genRandomPyramid, genGradientPyramid, genEmojiPyramid, genHolidayPyramid } from './util';
 
 dotenv.config();
 
@@ -18,32 +18,68 @@ client.login(process.env.TOKEN);
 client.on('ready', () => {
   console.log('Ready!');
   client.user?.setActivity({
-    name: 'making sideways pyramids',
+    name: 'creating unique pyramids',
     type: ActivityType.Playing
   });
 });
 
 client.on('messageCreate', async (msg: Message) => {
-  if (!msg.content.startsWith('/pyramid') || msg.author.bot) return;
+  if (msg.author.bot) return;
 
-  const args = msg.content.slice('/pyramid'.length).trim().split(/ +/);
+  const [command, ...args] = msg.content.trim().split(/ +/);
   const size = parseInt(args[0]);
   const toRepeat = args.slice(1).join(' ');
 
-  const valid = isValid(msg);
+  const noRepeatRequiredCommands = ['/random', '/gradient', '/holiday'];
+
+  let valid;
+
+  if (noRepeatRequiredCommands.includes(command)) {
+    valid = { isValid: true };
+  } else {
+    valid = isValid(command, size, toRepeat);
+  }
+
   if (!valid.isValid) {
     await msg.reply(valid.error || 'Invalid input');
     if (valid.reaction) await msg.react(valid.reaction);
     return;
   }
 
-  const toSend = genPyramid(toRepeat, size);
+  let toSend = '';
+  switch (command) {
+    case '/pyramid':
+      toSend = genPyramid(toRepeat, size);
+      break;
+    case '/centered':
+      toSend = genCenteredPyramid(toRepeat, size);
+      break;
+    case '/upside-down':
+      toSend = genUpsideDownPyramid(toRepeat, size);
+      break;
+    case '/right-pyramid':
+      toSend = genRightPyramid(toRepeat, size);
+      break;
+    case '/random':
+      toSend = genRandomPyramid(size);
+      break;
+    case '/gradient':
+      toSend = genGradientPyramid(size);
+      break;
+    case '/emoji':
+      toSend = genEmojiPyramid(size, toRepeat);
+      break;
+    case '/holiday':
+      toSend = genHolidayPyramid(size);
+      break;
+  }
 
   try {
     await msg.channel.send(toSend);
   } catch (err) {
     await msg.reply(
-      `Nice! It looks like you've successfully hacked the Pyramid! Feel free to pen a pull request :). BTW, the error was: ${err}`
+      `Error generating pyramid: ${err}`
     );
   }
 });
+
